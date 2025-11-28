@@ -1,4 +1,4 @@
-# China-Highway-Sign-SVG-Generator
+# China-Expressway-Sign-SVG-Generator
 
 中国高速公路标志svg生成器，代码借助LLM完成。标志样式遵循《[道路交通标志和标线 第2部分：道路交通标志](https://openstd.samr.gov.cn/bzgk/gb/newGbInfo?hcno=15B1FC09EE1AE92F1A9EC97BA3C9E451)》（GB5768.2-2022），支持国家高速和省级高速，支持有限种的编号位数、名称字数组合。
 
