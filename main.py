@@ -84,6 +84,7 @@ TEMPLATES["provincial_1digit_8char"] = TEMPLATES["provincial_2digit_8char"]
 TEMPLATES["provincial_4digit_5char"] = TEMPLATES["provincial_4digit_4char"]
 TEMPLATES["provincial_4digit_7char"] = TEMPLATES["provincial_4digit_6char"]
 
+
 def get_template_key(province, highway_number, highway_name):
     """根据条件确定使用的模板key"""
     # 判断是国家高速还是省级高速
@@ -110,6 +111,7 @@ def get_template_key(province, highway_number, highway_name):
     template_key = f"{highway_type}_{digit_count}digit_{name_length}"
 
     return template_key
+
 
 def create_highway_sign(province, highway_number, highway_name, save_path):
     """创建高速标志SVG文件"""
@@ -158,8 +160,23 @@ def main():
     success_files = []
 
     try:
+        # 检查Excel文件是否存在
+        if not os.path.exists(EXCEL_PATH):
+            raise FileNotFoundError(f"找不到Excel文件 '{EXCEL_PATH}'")
+
         # 读取Excel文件（无表头）
         df = pd.read_excel(EXCEL_PATH, header=None)
+
+        # 检查数据是否为空
+        if df.empty:
+            print("Excel文件为空，没有数据需要处理")
+            return
+
+        # 确保DataFrame至少有3列
+        if len(df.columns) < 3:
+            # 如果列数不足，添加空列
+            for i in range(len(df.columns), 3):
+                df[i] = None
 
         # 统计处理情况
         total_count = len(df)
@@ -170,10 +187,21 @@ def main():
         print(f"开始处理Excel文件，共{total_count}行数据...")
 
         for index, row in df.iterrows():
-            # 获取三列数据
-            province = str(row[0]).strip() if pd.notna(row[0]) else ""  # 第一列：省份
-            highway_number = str(row[1]).strip() if pd.notna(row[1]) else ""  # 第二列：高速编号
-            highway_name = row[2]  # 第三列：高速名称（可能为NaN）
+            # 安全地获取三列数据，使用try-except处理可能的列不存在问题
+            try:
+                province = str(row[0]).strip() if pd.notna(row[0]) else ""  # 第一列：省份
+            except KeyError:
+                province = ""
+
+            try:
+                highway_number = str(row[1]).strip() if pd.notna(row[1]) else ""  # 第二列：高速编号
+            except KeyError:
+                highway_number = ""
+
+            try:
+                highway_name = row[2]  # 第三列：高速名称（可能为NaN）
+            except KeyError:
+                highway_name = None
 
             # 基本校验
             if not province:
@@ -249,10 +277,18 @@ def main():
             for row_num, prov, num, name, reason in failed_rows:
                 print(f"  第{row_num}行：省份='{prov}', 编号='{num}', 名称='{name}' - 原因：{reason}")
 
-    except FileNotFoundError:
-        print(f"错误：找不到Excel文件 '{EXCEL_PATH}'")
+    except FileNotFoundError as e:
+        print(f"错误：{str(e)}")
+    except pd.errors.EmptyDataError:
+        print("错误：Excel文件为空")
+    except pd.errors.ParserError as e:
+        print(f"错误：Excel文件解析失败 - {str(e)}")
+    except PermissionError:
+        print(f"错误：没有权限读取Excel文件 '{EXCEL_PATH}'")
     except Exception as e:
         print(f"读取Excel文件时发生错误：{str(e)}")
+        print(f"错误类型：{type(e).__name__}")
+
 
 def convert_text_to_path(success_files, inkscape_path):
     """将SVG文件中的文字转换为曲线路径"""
@@ -308,6 +344,7 @@ def convert_text_to_path(success_files, inkscape_path):
         print(f"  处理失败: {len(failed_files)} 个文件")
         for filename, error in failed_files:
             print(f"    {filename}: {error}")
+
 
 if __name__ == "__main__":
     main()
